@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuvio All-In-One Builder</title>
+    <!-- Tailwind CSS Engine -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Core React Framework Engines -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-neutral-950 text-neutral-100 min-h-screen font-sans">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const AVAILABLE_SCRAPERS = [
+          { id: 'torrentio', name: 'Torrentio' },
+          { id: 'comet', name: 'Comet' },
+          { id: 'mediafusion', name: 'MediaFusion' },
+          { id: 'meteor', name: 'Meteor' },
+        ];
+
+        const AVAILABLE_QUALITIES = ['4k', '1080p', '720p', 'hdr', 'dolbyvision'];
+
+        function App() {
+          const [step, setStep] = useState(1);
+          const [loading, setLoading] = useState(false);
+          const [bcInput, setBcInput] = useState('');
+          const [bcUuid, setBcUuid] = useState('');
+          const [selectedScrapers, setSelectedScrapers] = useState(['torrentio', 'comet']);
+          const [selectedQualities, setSelectedQualities] = useState(['4k', '1080p']);
+          const [results, setResults] = useState(null);
+
+          useEffect(() => {
+            const params = new URLSearchParams(window.location.search);
+            const configData = params.get('config');
+            if (configData) {
+              try {
+                const decoded = JSON.parse(decodeURIComponent(escape(atob(configData))));
+                if (decoded.bcUuid) setBcUuid(decoded.bcUuid);
+                if (decoded.scrapers) setSelectedScrapers(decoded.scrapers);
+                if (decoded.qualities) setSelectedQualities(decoded.qualities);
+                if (decoded.results) setResults(decoded.results);
+                setStep(3);
+              } catch (e) {
+                console.error("Invalid config bookmark string");
+              }
+            }
+          }, []);
+
+          const handleBingeCatPaste = (val) => {
+            setBcInput(val);
+            const match = val.match(/(?:\/stremio\/|\/)([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
+            if (match) setBcUuid(match[1]);
+          };
+
+          const toggleScraper = (id) => {
+            setSelectedScrapers(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+          };
+
+          const toggleQuality = (id) => {
+            setSelectedQualities(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+          };
+
+          const finalizeSetup = async () => {
+            setLoading(true);
+            try {
+              const uniqueProfileId = crypto.randomUUID();
+              const aioPayload = {
+                userId: uniqueProfileId,
+                password: Math.random().toString(36).substring(2, 12),
+                configuration: {
+                  services: { torbox: null, realdebrid: null },
+                  addons: selectedScrapers.map(id => ({ id, enabled: true, options: {} })),
+                  filters: {
+                    resolutions: selectedQualities,
+                    excludeP2P: false,
+                    requireDebrid: false,
+                    excludeUncached: false
+                  },
+                  sorting: [{ type: "quality", order: "desc" }, { type: "seeders", order: "desc" }]
+                }
+              };
+
+              const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent('https://aiostreams.elfhosted.com/api/v1/user')}`;
+              
+              const res = await fetch(proxyUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(aioPayload)
+              });
+              
+              if (!res.ok) throw new Error("Server rejected setup configuration");
+
+              const finalOutputs = {
+                bingecat: `https://bingecat.com/stremio/${bcUuid}/manifest.json`,
+                aiostreams: `https://aiostreams.elfhosted.com/stremio/${uniqueProfileId}/manifest.json`
+              };
+
+              const saveState = { bcUuid, scrapers: selectedScrapers, qualities: selectedQualities, results: finalOutputs };
+              const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(saveState))));
+              finalOutputs.bookmark = `${window.location.origin}${window.location.pathname}?config=${encoded}`;
+
+              setResults(finalOutputs);
+              setStep(3);
+            } catch (err) {
+              alert("Error building setup profile: " + err.message);
+            } finally {
+              setLoading(false);
+            }
+          };
+
+          return (
+            <div className="flex flex-col items-center justify-center min-h-screen p-4 max-w-md mx-auto">
+              <div className="w-full bg-neutral-900 border border-neutral-800 rounded-2xl p-6 shadow-xl">
+                <div className="mb-6 text-center">
+                  <h1 className="text-xl font-bold tracking-tight text-white">Nuvio All-In-One Builder</h1>
+                  <p className="text-xs text-neutral-400 mt-1">Zero-Config Engine for native TorBox Instant Streaming</p>
+                </div>
+
+                {step === 1 && (
+                  <div>
+                    <h2 className="text-sm font-medium text-white mb-2">Step 1: Interface Rows & Catalog Layout</h2>
+                    <p className="text-xs text-neutral-400 mb-4">Open BingeCat anonymously to pick your custom watchlists and rows. Once built, paste your layout link below.</p>
+                    <a href="https://bingecat.com" target="_blank" rel="noreferrer" className="inline-block w-full text-center bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-medium py-3 px-4 rounded-xl mb-4 transition">Launch BingeCat Setup Dashboard ↗</a>
+                    <input type="text" placeholder="Paste your BingeCat manifest URL here..." value={bcInput} onChange={(e) => handleBingeCatPaste(e.target.value)} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs focus:outline-none focus:border-indigo-500 transition mb-4 text-white" />
+                    <button disabled={!bcUuid} onClick={() => setStep(2)} className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-medium py-3 rounded-xl transition text-xs">{bcUuid ? "Continue to Content Streamers" : "Paste Valid Link to Continue"}</button>
+                  </div>
+                )}
+
+                {step === 2 && (
+                  <div>
+                    <h2 className="text-sm font-medium text-white mb-4">Step 2: Select Scraping Networks</h2>
+                    <div className="mb-4">
+                      <label className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 block mb-2">Scrapers</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {AVAILABLE_SCRAPERS.map(s => (
+                          <button key={s.id} onClick={() => toggleScraper(s.id)} className={`p-3 rounded-xl border text-left text-xs transition ${selectedScrapers.includes(s.id) ? 'bg-indigo-950/40 border-indigo-500 text-white' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>{s.name}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="mb-6">
+                      <label className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 block mb-2">Allowed Qualities</label>
+                      <div className="flex flex-wrap gap-2">
+                        {AVAILABLE_QUALITIES.map(q => (
+                          <button key={q} onClick={() => toggleQuality(q)} className={`px-3 py-2 rounded-xl border text-[10px] uppercase font-medium transition ${selectedQualities.includes(q) ? 'bg-neutral-100 text-neutral-950 border-white' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>{q}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => setStep(1)} className="w-1/3 bg-neutral-800 text-neutral-300 font-medium py-3 rounded-xl text-xs">Back</button>
+                      <button onClick={finalizeSetup} disabled={loading || selectedScrapers.length === 0} className="w-2/3 bg-indigo-600 text-white font-medium py-3 rounded-xl text-xs flex items-center justify-center">{loading ? "Configuring..." : "Build All-In-One Manifests"}</button>
+                    </div>
+                  </div>
+                )}
+
+                {step === 3 && results && (
+                  <div className="space-y-4">
+                    <h2 className="text-sm font-semibold text-emerald-400 flex items-center gap-2">✓ Deployment Ready!</h2>
+                    <p className="text-xs text-neutral-400">Paste these links into your Nuvio app add-on dashboard.</p>
+                    <div>
+                      <label className="text-[10px] text-neutral-500 font-medium block mb-1">1. Interface Layout (BingeCat)</label>
+                      <div className="flex bg-neutral-950 border border-neutral-800 rounded-xl p-1">
+                        <input readOnly value={results.bingecat} className="bg-transparent text-[11px] p-2 flex-grow focus:outline-none text-neutral-300 min-w-0" />
+                        <button onClick={() => navigator.clipboard.writeText(results.bingecat)} className="bg-neutral-800 px-3 text-xs font-medium rounded-lg text-white">Copy</button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-neutral-500 font-medium block mb-1">2. Combined Scrapers (AIOStreams)</label>
+                      <div className="flex bg-neutral-950 border border-neutral-800 rounded-xl p-1">
+                        <input readOnly value={results.aiostreams} className="bg-transparent text-[11px] p-2 flex-grow focus:outline-none text-neutral-300 min-w-0" />
+                        <button onClick={() => navigator.clipboard.writeText(results.aiostreams)} className="bg-neutral-800 px-3 text-xs font-medium rounded-lg text-white">Copy</button>
+                      </div>
+                    </div>
+                    <div className="bg-neutral-950 border border-neutral-800 rounded-xl p-3">
+                      <label className="text-[10px] text-indigo-400 font-bold block uppercase mb-1">🔖 Save / Edit link</label>
+                      <p className="text-[11px] text-neutral-400 mb-2">Bookmark this unique URL to edit your filters later without starting over.</p>
+                      <button onClick={() => navigator.clipboard.writeText(results.bookmark)} className="w-full bg-neutral-800 text-white text-xs font-medium py-2 rounded-lg">Copy Unique Bookmark URL</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
