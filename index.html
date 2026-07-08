@@ -86,9 +86,8 @@
                 }
               };
 
-              const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent('https://aiostreams.elfhosted.com/api/v1/user')}`;
-              
-              const res = await fetch(proxyUrl, {
+              // Fetching directly to the endpoint since it natively supports cross-origin requests
+              const res = await fetch('https://aiostreams.elfhosted.com/api/v1/user', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(aioPayload)
@@ -193,4 +192,3 @@
     </script>
 </body>
 </html>
-
