@@ -17,13 +17,6 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        const AVAILABLE_SCRAPERS = [
-          { id: 'torrentio', name: 'Torrentio' },
-          { id: 'comet', name: 'Comet' },
-          { id: 'mediafusion', name: 'MediaFusion' },
-          { id: 'meteor', name: 'Meteor' },
-        ];
-
         const AVAILABLE_QUALITIES = ['4k', '1080p', '720p', '480p', '360p', 'hdr', 'dolbyvision', 'hdr10plus', 'remux', '3d'];
 
         function App() {
@@ -31,8 +24,11 @@
           const [loading, setLoading] = useState(false);
           const [bcInput, setBcInput] = useState('');
           const [bcUuid, setBcUuid] = useState('');
-          const [selectedScrapers, setSelectedScrapers] = useState(['torrentio', 'comet']);
-          const [selectedQualities, setSelectedQualities] = useState(['4k', '1080p']);
+          const [instanceType, setInstanceType] = useState('public'); // 'public' or 'selfhosted'
+          const [aioBaseUrl, setAioBaseUrl] = useState('https://aiostreams.elfhosted.com');
+          const [customAioId, setCustomAioId] = useState('');
+          const [isMobileOptimized, setIsMobileOptimized] = useState(false);
+          const [selectedQualities, setSelectedQualities] = useState(['4k', '1080p', '720p']);
           const [results, setResults] = useState(null);
 
           useEffect(() => {
@@ -42,8 +38,11 @@
               try {
                 const decoded = JSON.parse(decodeURIComponent(escape(atob(configData))));
                 if (decoded.bcUuid) setBcUuid(decoded.bcUuid);
-                if (decoded.scrapers) setSelectedScrapers(decoded.scrapers);
+                if (decoded.instanceType) setInstanceType(decoded.instanceType);
+                if (decoded.aioBaseUrl) setAioBaseUrl(decoded.aioBaseUrl);
+                if (decoded.customAioId) setCustomAioId(decoded.customAioId);
                 if (decoded.qualities) setSelectedQualities(decoded.qualities);
+                if (decoded.isMobileOptimized) setIsMobileOptimized(decoded.isMobileOptimized);
                 if (decoded.results) setResults(decoded.results);
                 setStep(3);
               } catch (e) {
@@ -58,63 +57,64 @@
             if (match) setBcUuid(match[1]);
           };
 
-          const toggleScraper = (id) => {
-            setSelectedScrapers(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+          const handleInstanceTypeChange = (type) => {
+            setInstanceType(type);
+            if (type === 'public') {
+              setAioBaseUrl('https://aiostreams.elfhosted.com');
+            } else {
+              setAioBaseUrl('http://your-vps-ip:3000');
+            }
           };
 
           const toggleQuality = (id) => {
+            setIsMobileOptimized(false);
             setSelectedQualities(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
           };
 
-          // Quick preset handler to filter out heavy mobile network bottlenecks
           const applyMobilePreset = () => {
+            setIsMobileOptimized(true);
             setSelectedQualities(['1080p', '720p', '480p']);
           };
 
-          const finalizeSetup = async () => {
+          const compileNuvioSetup = () => {
             setLoading(true);
-            try {
-              const uniqueProfileId = crypto.randomUUID();
-              const aioPayload = {
-                userId: uniqueProfileId,
-                password: Math.random().toString(36).substring(2, 12),
-                configuration: {
-                  services: { torbox: null, realdebrid: null },
-                  addons: selectedScrapers.map(id => ({ id, enabled: true, options: {} })),
-                  filters: {
-                    resolutions: selectedQualities,
-                    excludeP2P: false,
-                    requireDebrid: false,
-                    excludeUncached: false
-                  },
-                  sorting: [{ type: "quality", order: "desc" }, { type: "seeders", order: "desc" }]
-                }
-              };
+            setTimeout(() => {
+              try {
+                const mobileIndicator = isMobileOptimized ? "📱 Mobile | " : "";
+                const cleanBaseUrl = aioBaseUrl.replace(/\/$/, "");
+                const finalProfileId = customAioId.trim() || "your-profile-id";
 
-              const res = await fetch('https://aiostreams.elfhosted.com/api/v1/user', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(aioPayload)
-              });
-              
-              if (!res.ok) throw new Error("Server rejected setup configuration");
+                const nameTemplate = `{stream.resolution::exists["{stream.resolution}"||""]} | ${mobileIndicator}{stream.type::=debrid["Cloud"||""]}{stream.type::=p2p["P2P"||""]} | {service.cached::istrue["⚡ Cached"||"Not Cached"]} • {addon.name}`;
+                const descriptionTemplate = `{stream.year::exists["({stream.year}) "||""]} {stream.quality::exists["🎥 {stream.quality} "||""]}{stream.visualTags::exists["🔆 {stream.visualTags::join(' | ')} "||""]} {stream.audioTags::exists["🎧 {stream.audioTags::join(' | ')} "||""]} {stream.size::>0["📦 {stream.size::rbytes} "||""]}`;
 
-              const finalOutputs = {
-                bingecat: `https://bingecat.com/stremio/${bcUuid}/manifest.json`,
-                aiostreams: `https://aiostreams.elfhosted.com/stremio/${uniqueProfileId}/manifest.json`
-              };
+                const finalOutputs = {
+                  bingecat: bcInput.trim() || `https://bingecat.com/stremio/${bcUuid || 'your-uuid'}/manifest.json`,
+                  aiostreams: `${cleanBaseUrl}/stremio/${finalProfileId}/manifest.json`,
+                  nameTemplate,
+                  descriptionTemplate
+                };
 
-              const saveState = { bcUuid, scrapers: selectedScrapers, qualities: selectedQualities, results: finalOutputs };
-              const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(saveState))));
-              finalOutputs.bookmark = `${window.location.origin}${window.location.pathname}?config=${encoded}`;
+                const saveState = { 
+                  bcUuid, 
+                  instanceType,
+                  aioBaseUrl,
+                  customAioId: finalProfileId,
+                  qualities: selectedQualities, 
+                  isMobileOptimized,
+                  results: finalOutputs 
+                };
+                
+                const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(saveState))));
+                finalOutputs.bookmark = `${window.location.origin}${window.location.pathname}?config=${encoded}`;
 
-              setResults(finalOutputs);
-              setStep(3);
-            } catch (err) {
-              alert("Error building setup profile: " + err.message);
-            } finally {
-              setLoading(false);
-            }
+                setResults(finalOutputs);
+                setStep(3);
+              } catch (err) {
+                alert("Error during compilation: " + err.message);
+              } finally {
+                setLoading(false);
+              }
+            }, 300);
           };
 
           return (
@@ -131,25 +131,32 @@
                     <p className="text-xs text-neutral-400 mb-4">Open BingeCat anonymously to pick your custom watchlists and rows. Once built, paste your layout link below.</p>
                     <a href="https://bingecat.com" target="_blank" rel="noreferrer" className="inline-block w-full text-center bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-medium py-3 px-4 rounded-xl mb-4 transition">Launch BingeCat Setup Dashboard ↗</a>
                     <input type="text" placeholder="Paste your BingeCat manifest URL here..." value={bcInput} onChange={(e) => handleBingeCatPaste(e.target.value)} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs focus:outline-none focus:border-indigo-500 transition mb-4 text-white" />
-                    <button disabled={!bcUuid} onClick={() => setStep(2)} className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-medium py-3 rounded-xl transition text-xs">{bcUuid ? "Continue to Content Streamers" : "Paste Valid Link to Continue"}</button>
+                    <button disabled={!bcUuid} onClick={() => setStep(2)} className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-medium py-3 rounded-xl transition text-xs">{bcUuid ? "Continue to Infrastructure Setup" : "Paste Valid Link to Continue"}</button>
                   </div>
                 )}
 
                 {step === 2 && (
                   <div>
-                    <h2 className="text-sm font-medium text-white mb-4">Step 2: Select Scraping Networks</h2>
+                    <h2 className="text-sm font-medium text-white mb-4">Step 2: Connect Streamback Engine</h2>
+                    
                     <div className="mb-4">
-                      <label className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 block mb-2">Scrapers</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {AVAILABLE_SCRAPERS.map(s => (
-                          <button key={s.id} onClick={() => toggleScraper(s.id)} className={`p-3 rounded-xl border text-left text-xs transition ${selectedScrapers.includes(s.id) ? 'bg-indigo-950/40 border-indigo-500 text-white' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>{s.name}</button>
-                        ))}
+                      <label className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 block mb-2">AIOStreams Instance Deployment</label>
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        <button onClick={() => handleInstanceTypeChange('public')} className={`p-2.5 rounded-xl border text-center text-xs font-medium transition ${instanceType === 'public' ? 'bg-indigo-950/40 border-indigo-500 text-white' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>Public Instance</button>
+                        <button onClick={() => handleInstanceTypeChange('selfhosted')} className={`p-2.5 rounded-xl border text-center text-xs font-medium transition ${instanceType === 'selfhosted' ? 'bg-indigo-950/40 border-indigo-500 text-white' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>Self-Hosted 🐳</button>
                       </div>
+                      
+                      <label className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 block mb-1">AIOStreams Base Endpoint URL</label>
+                      <input type="text" value={aioBaseUrl} onChange={(e) => setAioBaseUrl(e.target.value)} placeholder={instanceType === 'public' ? "https://aiostreams.elfhosted.com" : "http://your-vps-ip:3000"} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs focus:outline-none focus:border-indigo-500 transition text-white mb-3" />
+                      
+                      <label className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 block mb-1">Profile User ID / UUID</label>
+                      <input type="text" value={customAioId} onChange={(e) => setCustomAioId(e.target.value)} placeholder="Paste your generated profile ID or configuration hash..." className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs focus:outline-none focus:border-indigo-500 transition text-white" />
                     </div>
+
                     <div className="mb-6">
                       <div className="flex justify-between items-center mb-1">
-                        <label className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 block">Allowed Qualities</label>
-                        <button onClick={applyMobilePreset} className="text-[10px] text-indigo-400 hover:text-indigo-300 font-medium transition bg-indigo-950/30 px-2 py-1 rounded-lg border border-indigo-800/40">📱 Optimize for Mobile</button>
+                        <label className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 block">Allowed Streaming Qualities</label>
+                        <button onClick={applyMobilePreset} className={`text-[10px] font-medium transition px-2 py-1 rounded-lg border ${isMobileOptimized ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-indigo-950/30 border-indigo-800/40 text-indigo-400 hover:text-indigo-300'}`}>📱 Optimize for Mobile</button>
                       </div>
                       <p className="text-[11px] text-neutral-400 mb-3 leading-relaxed">Excludes heavy bitrates (4K, Remux, DolbyVision) to prevent buffering loops and conserve data cap consumption on cellular networks.</p>
                       <div className="flex flex-wrap gap-2">
@@ -158,35 +165,59 @@
                         ))}
                       </div>
                     </div>
+
                     <div className="flex gap-2">
                       <button onClick={() => setStep(1)} className="w-1/3 bg-neutral-800 text-neutral-300 font-medium py-3 rounded-xl text-xs">Back</button>
-                      <button onClick={finalizeSetup} disabled={loading || selectedScrapers.length === 0} className="w-2/3 bg-indigo-600 text-white font-medium py-3 rounded-xl text-xs flex items-center justify-center">{loading ? "Configuring..." : "Build All-In-One Manifests"}</button>
+                      <button onClick={compileNuvioSetup} disabled={loading || !aioBaseUrl || !customAioId} className="w-2/3 bg-indigo-600 text-white font-medium py-3 rounded-xl text-xs flex items-center justify-center">{loading ? "Compiling Integration..." : "Generate Nuvio Deployment Pack"}</button>
                     </div>
                   </div>
                 )}
 
                 {step === 3 && results && (
                   <div className="space-y-4">
-                    <h2 className="text-sm font-semibold text-emerald-400 flex items-center gap-2">✓ Deployment Ready!</h2>
-                    <p className="text-xs text-neutral-400">Paste these links into your Nuvio app add-on dashboard.</p>
+                    <h2 className="text-sm font-semibold text-emerald-400 flex items-center gap-2">✓ Deployment Configuration Built!</h2>
+                    <p className="text-xs text-neutral-400">Copy and load these items directly inside your Nuvio application panel.</p>
+                    
                     <div>
-                      <label className="text-[10px] text-neutral-500 font-medium block mb-1">1. Interface Layout (BingeCat)</label>
+                      <label className="text-[10px] text-neutral-500 font-medium block mb-1">Addon Manifest 1: Catalog Layout (BingeCat)</label>
                       <div className="flex bg-neutral-950 border border-neutral-800 rounded-xl p-1">
                         <input readOnly value={results.bingecat} className="bg-transparent text-[11px] p-2 flex-grow focus:outline-none text-neutral-300 min-w-0" />
                         <button onClick={() => navigator.clipboard.writeText(results.bingecat)} className="bg-neutral-800 px-3 text-xs font-medium rounded-lg text-white">Copy</button>
                       </div>
                     </div>
+
                     <div>
-                      <label className="text-[10px] text-neutral-500 font-medium block mb-1">2. Combined Scrapers (AIOStreams)</label>
+                      <label className="text-[10px] text-neutral-500 font-medium block mb-1">Addon Manifest 2: Scraper Stream (AIOStreams)</label>
                       <div className="flex bg-neutral-950 border border-neutral-800 rounded-xl p-1">
                         <input readOnly value={results.aiostreams} className="bg-transparent text-[11px] p-2 flex-grow focus:outline-none text-neutral-300 min-w-0" />
                         <button onClick={() => navigator.clipboard.writeText(results.aiostreams)} className="bg-neutral-800 px-3 text-xs font-medium rounded-lg text-white">Copy</button>
                       </div>
                     </div>
+
+                    <div className="border-t border-neutral-800 pt-3 mt-2">
+                      <label className="text-[10px] text-indigo-400 font-bold block uppercase mb-1">🛠️ Nuvio Custom Formatting Templates</label>
+                      <p className="text-[10px] text-neutral-400 mb-2">Paste these scripts into your Nuvio Integrations panel to cleanly flag and manage streams on mobile connections.</p>
+                      
+                      <div className="mb-2">
+                        <span className="text-[9px] text-neutral-500 font-medium block mb-0.5">Name Template:</span>
+                        <div className="flex bg-neutral-950 border border-neutral-800 rounded-lg p-1 text-[10px] text-neutral-300 items-center justify-between">
+                          <code className="p-1 truncate max-w-[280px] text-neutral-400">{results.nameTemplate}</code>
+                          <button onClick={() => navigator.clipboard.writeText(results.nameTemplate)} className="bg-neutral-800 px-2 py-1 text-[10px] font-medium rounded text-white">Copy</button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="text-[9px] text-neutral-500 font-medium block mb-0.5">Description Template:</span>
+                        <div className="flex bg-neutral-950 border border-neutral-800 rounded-lg p-1 text-[10px] text-neutral-300 items-center justify-between">
+                          <code className="p-1 truncate max-w-[280px] text-neutral-400">{results.descriptionTemplate}</code>
+                          <button onClick={() => navigator.clipboard.writeText(results.descriptionTemplate)} className="bg-neutral-800 px-2 py-1 text-[10px] font-medium rounded text-white">Copy</button>
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="bg-neutral-950 border border-neutral-800 rounded-xl p-3">
-                      <label className="text-[10px] text-indigo-400 font-bold block uppercase mb-1">🔖 Save / Edit link</label>
-                      <p className="text-[11px] text-neutral-400 mb-2">Bookmark this unique URL to edit your filters later without starting over.</p>
-                      <button onClick={() => navigator.clipboard.writeText(results.bookmark)} className="w-full bg-neutral-800 text-white text-xs font-medium py-2 rounded-lg">Copy Unique Bookmark URL</button>
+                      <label className="text-[10px] text-neutral-500 font-bold block uppercase mb-1">🔖 Bookmark Deployment Config</label>
+                      <button onClick={() => navigator.clipboard.writeText(results.bookmark)} className="w-full bg-neutral-800 text-white text-xs font-medium py-2 rounded-lg">Copy Builder Saved URL</button>
                     </div>
                   </div>
                 )}
