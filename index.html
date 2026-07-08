@@ -62,7 +62,7 @@
             if (type === 'public') {
               setAioBaseUrl('https://aiostreams.elfhosted.com');
             } else {
-              setAioBaseUrl('http://your-vps-ip:3000');
+              setAioBaseUrl('https://bhunt131-bridge.hf.space');
             }
           };
 
@@ -147,10 +147,20 @@
                       </div>
                       
                       <label className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 block mb-1">AIOStreams Base Endpoint URL</label>
-                      <input type="text" value={aioBaseUrl} onChange={(e) => setAioBaseUrl(e.target.value)} placeholder={instanceType === 'public' ? "https://aiostreams.elfhosted.com" : "http://your-vps-ip:3000"} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs focus:outline-none focus:border-indigo-500 transition text-white mb-3" />
+                      <input type="text" value={aioBaseUrl} onChange={(e) => setAioBaseUrl(e.target.value)} placeholder="https://aiostreams.elfhosted.com" className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs focus:outline-none focus:border-indigo-500 transition text-white mb-3" />
                       
-                      <label className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 block mb-1">Profile User ID / UUID</label>
-                      <input type="text" value={customAioId} onChange={(e) => setCustomAioId(e.target.value)} placeholder="Paste your generated profile ID or configuration hash..." className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs focus:outline-none focus:border-indigo-500 transition text-white" />
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 block">Profile User ID / UUID</label>
+                        <a 
+                          href={instanceType === 'public' ? 'https://aiostreams.elfhosted.com' : aioBaseUrl} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="text-[10px] font-medium text-indigo-400 hover:text-indigo-300 transition flex items-center gap-0.5"
+                        >
+                          {instanceType === 'public' ? 'Get Public ID ↗' : 'Configure Server ↗'}
+                        </a>
+                      </div>
+                      <input type="text" value={customAioId} onChange={(e) => setCustomAioId(e.target.value)} placeholder={instanceType === 'public' ? "Paste profile name or token..." : "Paste UUID or combined configuration hash..."} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs focus:outline-none focus:border-indigo-500 transition text-white" />
                     </div>
 
                     <div className="mb-6">
