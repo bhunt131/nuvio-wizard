@@ -9,17 +9,19 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.post('/api/compile-deployment', async (req, res) => {
     try {
-        const { bingecatInput, scrapers, engineType, customBaseUrl, isMobile } = req.body;
+        const { bingecatInput, scrapers, engineType, customBaseUrl, maxQuality, isMobile } = req.body;
 
         const aioBaseUrl = engineType === 'public' 
             ? 'https://aiostreams.elfhosted.com' 
             : customBaseUrl.replace(/\/$/, "");
 
+        // Programmatic filtering payload injected based on selection
         const aioConfigPayload = {
             scrapers: scrapers,
             options: {
                 cached_only: true,
-                max_results: 5
+                max_results: 5,
+                resolution_filter: maxQuality !== 'all' ? maxQuality : undefined
             }
         };
 
