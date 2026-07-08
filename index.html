@@ -24,7 +24,7 @@
           { id: 'meteor', name: 'Meteor' },
         ];
 
-        const AVAILABLE_QUALITIES = ['4k', '1080p', '720p', 'hdr', 'dolbyvision'];
+        const AVAILABLE_QUALITIES = ['4k', '1080p', '720p', '480p', '360p', 'hdr', 'dolbyvision', 'hdr10plus', 'remux', '3d'];
 
         function App() {
           const [step, setStep] = useState(1);
@@ -66,6 +66,11 @@
             setSelectedQualities(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
           };
 
+          // Quick preset handler to filter out heavy mobile network bottlenecks
+          const applyMobilePreset = () => {
+            setSelectedQualities(['1080p', '720p', '480p']);
+          };
+
           const finalizeSetup = async () => {
             setLoading(true);
             try {
@@ -86,7 +91,6 @@
                 }
               };
 
-              // Fetching directly to the endpoint since it natively supports cross-origin requests
               const res = await fetch('https://aiostreams.elfhosted.com/api/v1/user', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -143,7 +147,11 @@
                       </div>
                     </div>
                     <div className="mb-6">
-                      <label className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 block mb-2">Allowed Qualities</label>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 block">Allowed Qualities</label>
+                        <button onClick={applyMobilePreset} className="text-[10px] text-indigo-400 hover:text-indigo-300 font-medium transition bg-indigo-950/30 px-2 py-1 rounded-lg border border-indigo-800/40">📱 Optimize for Mobile</button>
+                      </div>
+                      <p className="text-[11px] text-neutral-400 mb-3 leading-relaxed">Excludes heavy bitrates (4K, Remux, DolbyVision) to prevent buffering loops and conserve data cap consumption on cellular networks.</p>
                       <div className="flex flex-wrap gap-2">
                         {AVAILABLE_QUALITIES.map(q => (
                           <button key={q} onClick={() => toggleQuality(q)} className={`px-3 py-2 rounded-xl border text-[10px] uppercase font-medium transition ${selectedQualities.includes(q) ? 'bg-neutral-100 text-neutral-950 border-white' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>{q}</button>
