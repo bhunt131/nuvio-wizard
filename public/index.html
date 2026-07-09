@@ -24,108 +24,82 @@
 
         const QUALITY_OPTIONS = [
             { id: 'all', name: 'All Qualities', desc: 'No filters applied' },
-            { id: '1080p_or_less', name: 'Max 1080p', desc: 'Best for mobile frames / data' },
+            { id: '1080p_or_less', name: 'Max 1080p', desc: 'Best for mobile / data' },
             { id: '720p_or_less', name: 'Max 720p', desc: 'Saves maximum bandwidth' },
             { id: '4k_only', name: 'Strict 4K UHD', desc: 'Premium displays only' }
         ];
 
         function App() {
-          const [bcInput, setBcInput] = useState('');
-          const [engineType, setEngineType] = useState('public'); 
-          const [customBaseUrl, setCustomBaseUrl] = useState('https://your-selfhosted-domain.com');
           const [selectedScrapers, setSelectedScrapers] = useState(['torrentio', 'comet']);
           const [maxQuality, setMaxQuality] = useState('all');
           const [isMobile, setIsMobile] = useState(false);
-          const [loading, setLoading] = useState(false);
-          const [results, setResults] = useState(null);
-          const [copiedField, setCopiedField] = useState(null);
 
           const toggleScraper = (id) => {
             setSelectedScrapers(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
           };
 
-          const copyToClipboard = (text, fieldName) => {
-            navigator.clipboard.writeText(text);
-            setCopiedField(fieldName);
-            setTimeout(() => setCopiedField(null), 2000);
-          };
+          const downloadTemplate = () => {
+            const configData = {
+                scrapers: selectedScrapers,
+                options: {
+                    cached_only: true,
+                    max_results: 5,
+                    resolution_filter: maxQuality !== 'all' ? maxQuality : undefined,
+                    name_template: `[{stream.resolution}] • {stream.type::=debrid["☁️ Debrid"||"🌐 P2P"]} • {service.cached::istrue["⚡ Cached"||"⚪ Uncached"]} • {addon.name}`,
+                    description_template: `🎥 {stream.quality} • 📦 {stream.size::rbytes} • 🗓️ {stream.year} • {stream.visualTags::join(' ')}`
+                },
+                meta: { mobile_optimized: isMobile, generated_at: new Date().toISOString() }
+            };
 
-          const handleFormSubmit = async (e) => {
-            e.preventDefault();
-            setLoading(true);
-            try {
-                const response = await fetch('/api/compile-deployment', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ bingecatInput: bcInput, scrapers: selectedScrapers, engineType, customBaseUrl, maxQuality, isMobile })
-                });
-                const data = await response.json();
-                if (data.success) setResults(data);
-            } catch (err) { alert("Compilation failed: " + err.message); } 
-            finally { setLoading(false); }
+            const blob = new Blob([JSON.stringify(configData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `nuvio-config-${Date.now()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
           };
 
           return (
-            <div className="min-h-screen py-6 px-4 max-w-lg mx-auto">
-              <div className="border-b border-neutral-800 pb-4 mb-5">
-                <h1 className="text-lg font-black text-white tracking-tight">Nuvio Wizard</h1>
-                <p className="text-[11px] text-neutral-400">Automated Stream Provisioning</p>
+            <div className="min-h-screen py-8 px-4 max-w-lg mx-auto">
+              <div className="border-b border-neutral-800 pb-4 mb-6">
+                <h1 className="text-xl font-black text-white">Nuvio Provisioning</h1>
+                <p className="text-xs text-neutral-500">Local Template Generator</p>
               </div>
 
-              <form onSubmit={handleFormSubmit} className="space-y-4">
+              <div className="space-y-6">
+                {/* Scrapers */}
                 <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800">
-                  <label className="text-[10px] font-bold uppercase text-neutral-500 block mb-2">BingeCat UUID / Link</label>
-                  <input type="text" required value={bcInput} onChange={(e) => setBcInput(e.target.value)} className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-3 text-xs text-white" placeholder="Paste link..." />
+                    <label className="text-[10px] font-bold uppercase text-neutral-500 mb-3 block">Scraper Matrix</label>
+                    <div className="space-y-2">
+                        {AVAILABLE_SCRAPERS.map(s => (
+                            <div key={s.id} onClick={() => toggleScraper(s.id)} className={`p-3 rounded-lg border cursor-pointer text-xs flex justify-between items-center ${selectedScrapers.includes(s.id) ? 'bg-indigo-950/30 border-indigo-500 text-white' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>
+                                {s.name}
+                                {selectedScrapers.includes(s.id) && <span className="text-indigo-400 font-bold">✓</span>}
+                            </div>
+                        ))}
+                    </div>
                 </div>
 
-                <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800 space-y-3">
-                  <div className="flex justify-between items-center">
-                    <label className="text-[10px] font-bold uppercase text-neutral-500">Scraper Matrix</label>
-                    <div className="flex bg-neutral-950 p-1 rounded-lg border border-neutral-800 text-[10px]">
-                      <button type="button" onClick={() => setEngineType('public')} className={`px-2 py-1 rounded ${engineType === 'public' ? 'bg-indigo-600 text-white' : 'text-neutral-400'}`}>Public</button>
-                      <button type="button" onClick={() => setEngineType('selfhosted')} className={`px-2 py-1 rounded ${engineType === 'selfhosted' ? 'bg-indigo-600 text-white' : 'text-neutral-400'}`}>Self-Hosted</button>
+                {/* Quality */}
+                <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800">
+                    <label className="text-[10px] font-bold uppercase text-neutral-500 mb-3 block">Quality Filter</label>
+                    <div className="space-y-2">
+                        {QUALITY_OPTIONS.map(opt => (
+                            <div key={opt.id} onClick={() => setMaxQuality(opt.id)} className={`p-3 rounded-lg border cursor-pointer text-xs flex justify-between items-center ${maxQuality === opt.id ? 'bg-indigo-950/30 border-indigo-500 text-white' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>
+                                <span>{opt.name}</span>
+                                {maxQuality === opt.id && <span className="text-indigo-400 font-bold">●</span>}
+                            </div>
+                        ))}
                     </div>
-                  </div>
-                  {engineType === 'selfhosted' && <input type="url" required value={customBaseUrl} onChange={(e) => setCustomBaseUrl(e.target.value)} className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2.5 text-xs text-white" />}
-                  {AVAILABLE_SCRAPERS.map(s => (
-                    <div key={s.id} onClick={() => toggleScraper(s.id)} className={`p-3 rounded-lg border cursor-pointer text-xs flex justify-between items-center ${selectedScrapers.includes(s.id) ? 'bg-indigo-950/30 border-indigo-500 text-white' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>
-                      {s.name}
-                      {selectedScrapers.includes(s.id) && <span className="text-indigo-400 font-bold">✓</span>}
-                    </div>
-                  ))}
                 </div>
 
-                <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800 space-y-2">
-                  <label className="text-[10px] font-bold uppercase text-neutral-500">Quality Filter</label>
-                  {QUALITY_OPTIONS.map(opt => (
-                    <div key={opt.id} onClick={() => setMaxQuality(opt.id)} className={`p-3 rounded-lg border cursor-pointer text-xs flex justify-between items-center ${maxQuality === opt.id ? 'bg-indigo-950/30 border-indigo-500 text-white' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>
-                      {opt.name}
-                      {maxQuality === opt.id && <span className="text-indigo-400 font-bold">●</span>}
-                    </div>
-                  ))}
-                </div>
-
-                <button type="submit" disabled={loading} className="w-full bg-indigo-600 font-bold py-3.5 rounded-xl text-xs text-white">{loading ? 'Compiling...' : 'Generate Manifests'}</button>
-              </form>
-
-              {results && (
-                <div className="mt-5 space-y-3">
-                  <div className="bg-neutral-900 border border-emerald-900/30 rounded-xl p-4">
-                    <label className="text-[9px] text-emerald-400 uppercase font-bold mb-1 block">Catalog Interface</label>
-                    <div className="flex gap-2">
-                      <input readOnly value={results.bingecatManifest} className="bg-neutral-950 text-[10px] p-2 flex-grow font-mono text-neutral-400 rounded border border-neutral-800 truncate" />
-                      <button onClick={() => copyToClipboard(results.bingecatManifest, 'bc')} className="bg-neutral-800 text-xs px-3 rounded text-white">{copiedField === 'bc' ? 'Copied' : 'Copy'}</button>
-                    </div>
-                  </div>
-                  <div className="bg-neutral-900 border border-emerald-900/30 rounded-xl p-4">
-                    <label className="text-[9px] text-emerald-400 uppercase font-bold mb-1 block">Scraper Array</label>
-                    <div className="flex gap-2">
-                      <input readOnly value={results.aiostreamsManifest} className="bg-neutral-950 text-[10px] p-2 flex-grow font-mono text-neutral-400 rounded border border-neutral-800 truncate" />
-                      <button onClick={() => copyToClipboard(results.aiostreamsManifest, 'aio')} className="bg-neutral-800 text-xs px-3 rounded text-white">{copiedField === 'aio' ? 'Copied' : 'Copy'}</button>
-                    </div>
-                  </div>
-                </div>
-              )}
+                {/* Action */}
+                <button onClick={downloadTemplate} className="w-full bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold py-4 rounded-xl text-xs transition shadow-lg shadow-emerald-900/20">
+                    Download Configuration Template (.json)
+                </button>
+              </div>
             </div>
           );
         }
