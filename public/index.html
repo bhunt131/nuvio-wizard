@@ -5,133 +5,69 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nuvio Provisioning Panel</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
-<body class="bg-neutral-950 text-neutral-100 min-h-screen font-sans antialiased">
-    <div id="root"></div>
+<body class="bg-neutral-950 text-neutral-100 min-h-screen p-6 font-sans">
+    <div class="max-w-md mx-auto space-y-8">
+        
+        <div class="text-center border-b border-neutral-800 pb-6">
+            <h1 class="text-2xl font-black text-white">Nuvio Provisioning</h1>
+            <p class="text-neutral-500 text-sm mt-1">Generate AIOStreams Configuration Presets</p>
+        </div>
 
-    <script type="text/babel">
-        const { useState } = React;
+        <!-- Preset Selection -->
+        <div class="grid gap-4">
+            
+            <!-- Mobile Preset -->
+            <div class="bg-neutral-900 border border-neutral-800 p-5 rounded-2xl">
+                <h2 class="font-bold text-sm text-indigo-400 mb-2">1. Mobile Optimized</h2>
+                <p class="text-[11px] text-neutral-400 mb-4">1080p limit, lightweight data usage, 3 results per list.</p>
+                <button onclick="downloadPreset('mobile')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-xs transition">Download Mobile JSON</button>
+            </div>
 
-        const AVAILABLE_SCRAPERS = [
-            { id: 'torrentio', name: 'Torrentio (Public)' },
-            { id: 'comet', name: 'Comet (High-Speed)' },
-            { id: 'knightcrawler', name: 'KnightCrawler (P2P)' },
-            { id: 'mediafusion', name: 'MediaFusion' }
-        ];
+            <!-- Quality Preset -->
+            <div class="bg-neutral-900 border border-neutral-800 p-5 rounded-2xl">
+                <h2 class="font-bold text-sm text-emerald-400 mb-2">2. High-Performance</h2>
+                <p class="text-[11px] text-neutral-400 mb-4">All qualities enabled, 15 result limit for high-fidelity selection.</p>
+                <button onclick="downloadPreset('quality')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-xs transition">Download High-Qual JSON</button>
+            </div>
 
-        const QUALITY_OPTIONS = [
-            { id: 'all', name: 'All Qualities' },
-            { id: '1080p_or_less', name: 'Max 1080p' },
-            { id: '720p_or_less', name: 'Max 720p' },
-            { id: '4k_only', name: 'Strict 4K' }
-        ];
+        </div>
 
-        function App() {
-          const [selectedScrapers, setSelectedScrapers] = useState(['torrentio', 'comet']);
-          const [maxQuality, setMaxQuality] = useState('all');
-          const [bingeCatUrl, setBingeCatUrl] = useState('');
-          const [copyStatus, setCopyStatus] = useState('Copy JSON');
+        <!-- Help Section -->
+        <div class="bg-neutral-900/50 p-4 rounded-xl text-[10px] text-neutral-500 border border-neutral-800">
+            <p class="mb-2"><b>Instructions:</b></p>
+            <ol class="list-decimal ml-4 space-y-1">
+                <li>Download your preferred preset JSON.</li>
+                <li>Visit the <a href="https://aiostreams.elfhosted.com/stremio/configure" target="_blank" class="text-white underline">AIOStreams Configurator</a>.</li>
+                <li>In the configuration menu, select <b>Import</b> and upload the downloaded file.</li>
+            </ol>
+        </div>
 
-          const toggleScraper = (id) => {
-            setSelectedScrapers(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-          };
+    </div>
 
-          const generateConfig = () => ({
-            scrapers: selectedScrapers,
-            bingecat_url: bingeCatUrl,
-            options: {
-                cached_only: true,
-                max_results: 5,
-                resolution_filter: maxQuality !== 'all' ? maxQuality : undefined,
-                name_template: `[{stream.resolution}] • {stream.type::=debrid["☁️ Debrid"||"🌐 P2P"]} • {service.cached::istrue["⚡ Cached"||"⚪ Uncached"]} • {addon.name}`,
-                description_template: `🎥 {stream.quality} • 📦 {stream.size::rbytes} • 🗓️ {stream.year} • {stream.visualTags::join(' ')}`
-            }
-          });
-
-          const downloadJson = () => {
-            const data = JSON.stringify(generateConfig(), null, 2);
-            const blob = new Blob([data], { type: 'application/json' });
+    <script>
+        function downloadPreset(type) {
+            const config = {
+                scrapers: ["torrentio", "comet"],
+                options: {
+                    cached_only: true,
+                    // Mobile = 3 results, Quality = 15 results
+                    max_results: type === 'mobile' ? 3 : 15,
+                    // Mobile = 1080p cap, Quality = All
+                    resolution_filter: type === 'mobile' ? "1080p_or_less" : undefined,
+                    name_template: "[{stream.resolution}] • {stream.type::=debrid[\"☁️ Debrid\"||\"🌐 P2P\"]} • {service.cached::istrue[\"⚡ Cached\"||\"⚪ Uncached\"]} • {addon.name}",
+                    description_template: "🎥 {stream.quality} • 📦 {stream.size::rbytes} • 🗓️ {stream.year}"
+                }
+            };
+            
+            const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `nuvio-master-config.json`;
-            document.body.appendChild(a);
+            a.download = `nuvio-${type}-preset.json`;
             a.click();
-            document.body.removeChild(a);
             URL.revokeObjectURL(url);
-          };
-
-          const copyToClipboard = () => {
-            navigator.clipboard.writeText(JSON.stringify(generateConfig(), null, 2));
-            setCopyStatus('Copied!');
-            setTimeout(() => setCopyStatus('Copy JSON'), 2000);
-          };
-
-          return (
-            <div className="min-h-screen py-8 px-4 max-w-lg mx-auto space-y-6">
-              {/* Header */}
-              <div className="border-b border-neutral-800 pb-4">
-                <h1 className="text-xl font-black text-white">Nuvio Provisioning</h1>
-                <p className="text-xs text-neutral-500">Master Config Generator</p>
-              </div>
-
-              {/* Instructions Box */}
-              <div className="bg-indigo-950/20 border border-indigo-500/30 p-4 rounded-xl">
-                  <h2 className="text-[11px] font-bold uppercase text-indigo-400 mb-2">Instructions</h2>
-                  <ol className="text-[11px] text-neutral-400 space-y-2 list-decimal ml-3">
-                      <li>Select your scrapers and quality settings below.</li>
-                      <li>Paste your BingeCat URL if you want it saved in the config.</li>
-                      <li>Tap <b>Download Config</b>.</li>
-                      <li>Open your AIOStreams configure page (link below).</li>
-                      <li>Locate the <b>Import</b> option and upload your file.</li>
-                  </ol>
-                  <a href="https://aiostreams.elfhosted.com/stremio/configure" target="_blank" className="mt-3 block text-indigo-300 underline font-bold text-[10px]">
-                      Open AIOStreams Configure Page ↗
-                  </a>
-              </div>
-
-              {/* Configuration Inputs */}
-              <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800">
-                  <label className="text-[10px] font-bold uppercase text-neutral-500 mb-3 block">Scraper Matrix</label>
-                  <div className="space-y-2">
-                      {AVAILABLE_SCRAPERS.map(s => (
-                          <div key={s.id} onClick={() => toggleScraper(s.id)} className={`p-3 rounded-lg border cursor-pointer text-xs flex justify-between items-center ${selectedScrapers.includes(s.id) ? 'bg-indigo-950/30 border-indigo-500 text-white' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>
-                              {s.name}
-                              {selectedScrapers.includes(s.id) && <span className="text-indigo-400 font-bold">✓</span>}
-                          </div>
-                      ))}
-                  </div>
-              </div>
-
-              <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800">
-                  <label className="text-[10px] font-bold uppercase text-neutral-500 mb-3 block">Quality Filter</label>
-                  <div className="space-y-2">
-                      {QUALITY_OPTIONS.map(opt => (
-                          <div key={opt.id} onClick={() => setMaxQuality(opt.id)} className={`p-3 rounded-lg border cursor-pointer text-xs flex justify-between items-center ${maxQuality === opt.id ? 'bg-indigo-950/30 border-indigo-500 text-white' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>
-                              <span>{opt.name}</span>
-                              {maxQuality === opt.id && <span className="text-indigo-400 font-bold">●</span>}
-                          </div>
-                      ))}
-                  </div>
-              </div>
-
-              <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800">
-                  <label className="text-[10px] font-bold uppercase text-neutral-500 mb-2 block">Binge Cat URL</label>
-                  <input type="text" value={bingeCatUrl} onChange={(e) => setBingeCatUrl(e.target.value)} className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-3 text-xs text-white" placeholder="https://bingecat.com/stremio/..." />
-              </div>
-
-              <div className="flex gap-2">
-                <button onClick={downloadJson} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl text-xs transition">Download Config</button>
-                <button onClick={copyToClipboard} className="flex-1 bg-neutral-800 hover:bg-neutral-700 text-white font-bold py-4 rounded-xl text-xs transition">{copyStatus}</button>
-              </div>
-            </div>
-          );
         }
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
     </script>
 </body>
 </html>
