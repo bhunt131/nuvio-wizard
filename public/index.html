@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuvio Provisioning Panel</title>
+    <title>Nuvio Provisioning</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
@@ -15,90 +15,64 @@
     <script type="text/babel">
         const { useState } = React;
 
-        const AVAILABLE_SCRAPERS = [
-            { id: 'torrentio', name: 'Torrentio (Public Catalogs)' },
-            { id: 'comet', name: 'Comet (High-Speed Scraper)' },
-            { id: 'knightcrawler', name: 'KnightCrawler (P2P Index)' },
-            { id: 'mediafusion', name: 'MediaFusion (Alternative Links)' }
-        ];
-
-        const QUALITY_OPTIONS = [
-            { id: 'all', name: 'All Qualities', desc: 'No filters applied' },
-            { id: '1080p_or_less', name: 'Max 1080p', desc: 'Best for mobile / data' },
-            { id: '720p_or_less', name: 'Max 720p', desc: 'Saves maximum bandwidth' },
-            { id: '4k_only', name: 'Strict 4K UHD', desc: 'Premium displays only' }
-        ];
-
         function App() {
           const [selectedScrapers, setSelectedScrapers] = useState(['torrentio', 'comet']);
           const [maxQuality, setMaxQuality] = useState('all');
-          const [isMobile, setIsMobile] = useState(false);
+          const [bingeCatUrl, setBingeCatUrl] = useState('');
+          const [copyStatus, setCopyStatus] = useState('Copy JSON');
 
-          const toggleScraper = (id) => {
-            setSelectedScrapers(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-          };
+          const generateConfig = () => ({
+            scrapers: selectedScrapers,
+            bingecat_url: bingeCatUrl,
+            options: {
+                cached_only: true,
+                max_results: 5,
+                resolution_filter: maxQuality !== 'all' ? maxQuality : undefined,
+                name_template: `[{stream.resolution}] • {stream.type::=debrid["☁️ Debrid"||"🌐 P2P"]} • {service.cached::istrue["⚡ Cached"||"⚪ Uncached"]} • {addon.name}`,
+                description_template: `🎥 {stream.quality} • 📦 {stream.size::rbytes} • 🗓️ {stream.year} • {stream.visualTags::join(' ')}`
+            }
+          });
 
-          const downloadTemplate = () => {
-            const configData = {
-                scrapers: selectedScrapers,
-                options: {
-                    cached_only: true,
-                    max_results: 5,
-                    resolution_filter: maxQuality !== 'all' ? maxQuality : undefined,
-                    name_template: `[{stream.resolution}] • {stream.type::=debrid["☁️ Debrid"||"🌐 P2P"]} • {service.cached::istrue["⚡ Cached"||"⚪ Uncached"]} • {addon.name}`,
-                    description_template: `🎥 {stream.quality} • 📦 {stream.size::rbytes} • 🗓️ {stream.year} • {stream.visualTags::join(' ')}`
-                },
-                meta: { mobile_optimized: isMobile, generated_at: new Date().toISOString() }
-            };
-
-            const blob = new Blob([JSON.stringify(configData, null, 2)], { type: 'application/json' });
+          // Optimized for Mobile Download
+          const downloadJson = () => {
+            const data = JSON.stringify(generateConfig(), null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
+            
             const a = document.createElement('a');
             a.href = url;
-            a.download = `nuvio-config-${Date.now()}.json`;
+            a.download = `nuvio-master-config.json`;
             document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            a.click(); // Triggers the browser download prompt immediately
+            
+            // Cleanup
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 100);
+          };
+
+          const copyToClipboard = () => {
+            navigator.clipboard.writeText(JSON.stringify(generateConfig(), null, 2));
+            setCopyStatus('Copied!');
+            setTimeout(() => setCopyStatus('Copy JSON'), 2000);
           };
 
           return (
-            <div className="min-h-screen py-8 px-4 max-w-lg mx-auto">
-              <div className="border-b border-neutral-800 pb-4 mb-6">
+            <div className="min-h-screen py-8 px-4 max-w-lg mx-auto space-y-6">
+              <div className="border-b border-neutral-800 pb-4">
                 <h1 className="text-xl font-black text-white">Nuvio Provisioning</h1>
-                <p className="text-xs text-neutral-500">Local Template Generator</p>
+                <p className="text-xs text-neutral-500">Master Backup Generator</p>
               </div>
 
-              <div className="space-y-6">
-                {/* Scrapers */}
-                <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800">
-                    <label className="text-[10px] font-bold uppercase text-neutral-500 mb-3 block">Scraper Matrix</label>
-                    <div className="space-y-2">
-                        {AVAILABLE_SCRAPERS.map(s => (
-                            <div key={s.id} onClick={() => toggleScraper(s.id)} className={`p-3 rounded-lg border cursor-pointer text-xs flex justify-between items-center ${selectedScrapers.includes(s.id) ? 'bg-indigo-950/30 border-indigo-500 text-white' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>
-                                {s.name}
-                                {selectedScrapers.includes(s.id) && <span className="text-indigo-400 font-bold">✓</span>}
-                            </div>
-                        ))}
-                    </div>
-                </div>
+              <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800">
+                  <label className="text-[10px] font-bold uppercase text-neutral-500 mb-2 block">Binge Cat Catalog URL</label>
+                  <input type="text" value={bingeCatUrl} onChange={(e) => setBingeCatUrl(e.target.value)} className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-3 text-xs text-white" placeholder="Paste your Binge Cat link here..." />
+              </div>
 
-                {/* Quality */}
-                <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800">
-                    <label className="text-[10px] font-bold uppercase text-neutral-500 mb-3 block">Quality Filter</label>
-                    <div className="space-y-2">
-                        {QUALITY_OPTIONS.map(opt => (
-                            <div key={opt.id} onClick={() => setMaxQuality(opt.id)} className={`p-3 rounded-lg border cursor-pointer text-xs flex justify-between items-center ${maxQuality === opt.id ? 'bg-indigo-950/30 border-indigo-500 text-white' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>
-                                <span>{opt.name}</span>
-                                {maxQuality === opt.id && <span className="text-indigo-400 font-bold">●</span>}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Action */}
-                <button onClick={downloadTemplate} className="w-full bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold py-4 rounded-xl text-xs transition shadow-lg shadow-emerald-900/20">
-                    Download Configuration Template (.json)
-                </button>
+              <div className="flex gap-2">
+                <button onClick={downloadJson} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl text-xs">Download File</button>
+                <button onClick={copyToClipboard} className="flex-1 bg-neutral-800 hover:bg-neutral-700 text-white font-bold py-4 rounded-xl text-xs">{copyStatus}</button>
               </div>
             </div>
           );
