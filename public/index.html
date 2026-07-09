@@ -72,12 +72,28 @@
 
           return (
             <div className="min-h-screen py-8 px-4 max-w-lg mx-auto space-y-6">
+              {/* Header */}
               <div className="border-b border-neutral-800 pb-4">
                 <h1 className="text-xl font-black text-white">Nuvio Provisioning</h1>
                 <p className="text-xs text-neutral-500">Master Config Generator</p>
               </div>
 
-              {/* Scrapers */}
+              {/* Instructions Box */}
+              <div className="bg-indigo-950/20 border border-indigo-500/30 p-4 rounded-xl">
+                  <h2 className="text-[11px] font-bold uppercase text-indigo-400 mb-2">Instructions</h2>
+                  <ol className="text-[11px] text-neutral-400 space-y-2 list-decimal ml-3">
+                      <li>Select your scrapers and quality settings below.</li>
+                      <li>Paste your BingeCat URL if you want it saved in the config.</li>
+                      <li>Tap <b>Download Config</b>.</li>
+                      <li>Open your AIOStreams configure page (link below).</li>
+                      <li>Locate the <b>Import</b> option and upload your file.</li>
+                  </ol>
+                  <a href="https://aiostreams.elfhosted.com/stremio/configure" target="_blank" className="mt-3 block text-indigo-300 underline font-bold text-[10px]">
+                      Open AIOStreams Configure Page ↗
+                  </a>
+              </div>
+
+              {/* Configuration Inputs */}
               <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800">
                   <label className="text-[10px] font-bold uppercase text-neutral-500 mb-3 block">Scraper Matrix</label>
                   <div className="space-y-2">
@@ -90,7 +106,6 @@
                   </div>
               </div>
 
-              {/* Quality */}
               <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800">
                   <label className="text-[10px] font-bold uppercase text-neutral-500 mb-3 block">Quality Filter</label>
                   <div className="space-y-2">
@@ -103,13 +118,11 @@
                   </div>
               </div>
 
-              {/* Binge Cat URL */}
               <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800">
-                  <label className="text-[10px] font-bold uppercase text-neutral-500 mb-2 block">Binge Cat Catalog URL</label>
+                  <label className="text-[10px] font-bold uppercase text-neutral-500 mb-2 block">Binge Cat URL</label>
                   <input type="text" value={bingeCatUrl} onChange={(e) => setBingeCatUrl(e.target.value)} className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-3 text-xs text-white" placeholder="https://bingecat.com/stremio/..." />
               </div>
 
-              {/* Action Buttons */}
               <div className="flex gap-2">
                 <button onClick={downloadJson} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl text-xs transition">Download Config</button>
                 <button onClick={copyToClipboard} className="flex-1 bg-neutral-800 hover:bg-neutral-700 text-white font-bold py-4 rounded-xl text-xs transition">{copyStatus}</button>
