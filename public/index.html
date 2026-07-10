@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nuvio Provisioning Panel</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- React & Babel -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -56,7 +54,6 @@
 
             return (
                 <div className="max-w-xl mx-auto space-y-8">
-                    {/* Header */}
                     <div className="text-center pb-4">
                         <h1 className="text-3xl font-black text-white tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-emerald-400">
                             Nuvio Provisioning
@@ -111,8 +108,10 @@
                         </h2>
                         <ol className="space-y-3 text-sm text-slate-300 ml-7 list-decimal">
                             <li>Visit the <a href="https://aiostreams.elfhosted.com/stremio/configure" target="_blank" className="text-amber-400 underline">AIOStreams Configurator</a>.</li>
-                            <li>Click <strong>Import</strong> and upload your downloaded file.</li>
-                            <li>Click <strong>Install</strong>. Your Nuvio backend handles authentication automatically.</li>
+                            <li>Click the <strong>Import Template</strong> button (arrow icon inside a box) and upload your downloaded file.</li>
+                            <li>When asked to select services, click <strong>Skip</strong>.</li>
+                            <li>At the credentials prompt, click <strong>Load Template</strong>.</li>
+                            <li>Enter a password, click <strong>Create</strong>, and copy your final <strong>Manifest URL</strong>.</li>
                         </ol>
                     </div>
                 </div>
