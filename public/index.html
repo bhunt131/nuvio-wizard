@@ -20,7 +20,6 @@
         function App() {
             const [bingeCatUrl, setBingeCatUrl] = useState('');
 
-            // Load saved URL on mount
             useEffect(() => {
                 const savedUrl = localStorage.getItem('nuvio_binge_url') || '';
                 setBingeCatUrl(savedUrl);
@@ -30,7 +29,7 @@
                 metadata: {
                     id: `nuvio-${type}-config`,
                     name: `Nuvio ${type.charAt(0).toUpperCase() + type.slice(1)} Preset`,
-                    description: "Optimized Scraper & Filter settings for AIOStreams",
+                    description: "Optimized Scraper & Filter settings for Nuvio",
                     author: "Nuvio"
                 },
                 config: {
@@ -62,93 +61,60 @@
                         <h1 className="text-3xl font-black text-white tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-emerald-400">
                             Nuvio Provisioning
                         </h1>
-                        <p className="text-slate-400 text-sm mt-2">Your all-in-one setup wizard for Stremio, Binge Cat, and AIOStreams.</p>
+                        <p className="text-slate-400 text-sm mt-2">Automated setup for your media environment.</p>
                     </div>
 
-                    {/* Step 1: Binge Cat */}
-                    <div className="bg-slate-800 border border-slate-700 p-6 rounded-2xl shadow-lg relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+                    {/* Step 1 */}
+                    <div className="bg-slate-800 border border-slate-700 p-6 rounded-2xl shadow-lg relative">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 rounded-l-2xl"></div>
                         <h2 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
                             <span className="bg-indigo-500/20 text-indigo-400 rounded-full w-6 h-6 flex items-center justify-center text-xs">1</span>
-                            Configure Binge Cat
+                            Binge Cat Configuration
                         </h2>
-                        <p className="text-sm text-slate-400 mb-4">
-                            Binge Cat provides your UI categories (Trending, Popular, Networks). Create your personalized catalog list first.
-                        </p>
                         <a href="https://bingecat.com/stremio/configure" target="_blank" className="inline-block mb-4 text-xs font-bold bg-slate-700 hover:bg-slate-600 text-white py-2 px-4 rounded-lg transition">
                             ↗ Open Binge Cat Configurator
                         </a>
-                        
-                        <div className="mt-2">
-                            <label className="text-[11px] font-bold uppercase text-slate-500 mb-2 block tracking-wide">Paste Binge Cat URL Here</label>
-                            <input 
-                                type="text" 
-                                value={bingeCatUrl} 
-                                onChange={(e) => setBingeCatUrl(e.target.value)} 
-                                className="w-full bg-slate-900 border border-slate-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none rounded-xl p-3 text-sm text-white transition placeholder-slate-600"
-                                placeholder="https://bingecat.com/stremio/..." 
-                            />
-                        </div>
+                        <input 
+                            type="text" 
+                            value={bingeCatUrl} 
+                            onChange={(e) => setBingeCatUrl(e.target.value)} 
+                            className="w-full bg-slate-900 border border-slate-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none rounded-xl p-3 text-sm text-white transition placeholder-slate-600"
+                            placeholder="Paste Binge Cat URL here..." 
+                        />
                     </div>
 
-                    {/* Step 2: Download Preset */}
-                    <div className="bg-slate-800 border border-slate-700 p-6 rounded-2xl shadow-lg relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
+                    {/* Step 2 */}
+                    <div className="bg-slate-800 border border-slate-700 p-6 rounded-2xl shadow-lg relative">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 rounded-l-2xl"></div>
                         <h2 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
                             <span className="bg-emerald-500/20 text-emerald-400 rounded-full w-6 h-6 flex items-center justify-center text-xs">2</span>
-                            Download AIOStreams Preset
+                            Select Preset
                         </h2>
-                        <p className="text-sm text-slate-400 mb-5">
-                            Choose your device type to generate an optimized JSON file containing your Binge Cat URL and pre-configured scrapers (Torrentio, Comet, KnightCrawler, MediaFusion).
-                        </p>
-
-                        <div className="grid sm:grid-cols-2 gap-4">
-                            <button onClick={() => download('mobile')} className="group flex flex-col items-center bg-slate-900 hover:bg-indigo-600 border border-slate-700 hover:border-indigo-500 text-white p-4 rounded-xl transition duration-200">
-                                <span className="font-bold mb-1">📱 Mobile Profile</span>
-                                <span className="text-[10px] text-slate-400 group-hover:text-indigo-200 text-center">1080p limit • 3 results per quality<br/>Saves battery & bandwidth</span>
+                        <div className="grid sm:grid-cols-2 gap-4 mt-4">
+                            <button onClick={() => download('mobile')} className="bg-slate-900 hover:bg-indigo-600 border border-slate-700 text-white p-4 rounded-xl transition">
+                                <span className="font-bold block">📱 Mobile Profile</span>
+                                <span className="text-[10px] text-slate-400">1080p limit • 3 results</span>
                             </button>
-                            <button onClick={() => download('quality')} className="group flex flex-col items-center bg-slate-900 hover:bg-emerald-600 border border-slate-700 hover:border-emerald-500 text-white p-4 rounded-xl transition duration-200">
-                                <span className="font-bold mb-1">📺 Home Theater</span>
-                                <span className="text-[10px] text-slate-400 group-hover:text-emerald-200 text-center">Unlimited resolution • 15 results<br/>Maximum fidelity for big screens</span>
+                            <button onClick={() => download('quality')} className="bg-slate-900 hover:bg-emerald-600 border border-slate-700 text-white p-4 rounded-xl transition">
+                                <span className="font-bold block">📺 Home Theater</span>
+                                <span className="text-[10px] text-slate-400">Unlimited • 15 results</span>
                             </button>
                         </div>
                     </div>
 
-                    {/* Step 3: AIOStreams Import Instructions */}
-                    <div className="bg-slate-800 border border-slate-700 p-6 rounded-2xl shadow-lg relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
+                    {/* Step 3 */}
+                    <div className="bg-slate-800 border border-slate-700 p-6 rounded-2xl shadow-lg relative">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-amber-500 rounded-l-2xl"></div>
                         <h2 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
                             <span className="bg-amber-500/20 text-amber-400 rounded-full w-6 h-6 flex items-center justify-center text-xs">3</span>
-                            Import into AIOStreams
+                            Finalize via AIOStreams
                         </h2>
-                        <p className="text-sm text-slate-400 mb-4">
-                            Now apply your custom template to your AIOStreams setup to generate your final Stremio add-on.
-                        </p>
-
-                        <ol className="space-y-3 text-sm text-slate-300">
-                            <li className="flex gap-3 items-start">
-                                <span className="mt-0.5 text-amber-500 font-bold">1.</span>
-                                <div>Visit the <a href="https://aiostreams.elfhosted.com/stremio/configure" target="_blank" className="text-amber-400 hover:text-amber-300 underline underline-offset-2 transition">AIOStreams Configurator</a>.</div>
-                            </li>
-                            <li className="flex gap-3 items-start">
-                                <span className="mt-0.5 text-amber-500 font-bold">2.</span>
-                                <div>Click the <strong>Import Template</strong> or <strong>Import</strong> button on the AIOStreams page (usually located near the top).</div>
-                            </li>
-                            <li className="flex gap-3 items-start">
-                                <span className="mt-0.5 text-amber-500 font-bold">3.</span>
-                                <div>Select the <code>.json</code> file you just downloaded in Step 2. Your scrapers, Binge Cat URL, and filtering rules will instantly populate.</div>
-                            </li>
-                            <li className="flex gap-3 items-start">
-                                <span className="mt-0.5 text-amber-500 font-bold">4.</span>
-                                <div>Ensure your <strong>TorBox / Debrid</strong> credentials are filled out in the AIOStreams config (this template intentionally leaves them blank for your security).</div>
-                            </li>
-                            <li className="flex gap-3 items-start">
-                                <span className="mt-0.5 text-amber-500 font-bold">5.</span>
-                                <div>Click <strong>Install</strong> to add the optimized add-on to Stremio!</div>
-                            </li>
+                        <ol className="space-y-3 text-sm text-slate-300 ml-7 list-decimal">
+                            <li>Visit the <a href="https://aiostreams.elfhosted.com/stremio/configure" target="_blank" className="text-amber-400 underline">AIOStreams Configurator</a>.</li>
+                            <li>Click <strong>Import</strong> and upload your downloaded file.</li>
+                            <li>Click <strong>Install</strong>. Your Nuvio backend handles authentication automatically.</li>
                         </ol>
                     </div>
-
                 </div>
             );
         }
