@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0.0",
+  "preset_type": "quality",
+  "scrapers": ["torrentio", "comet"],
+  "options": {
+    "cached_only": true,
+    "max_results": 15,
+    "resolution_filter": null,
+    "name_template": "[{stream.resolution}] • {stream.type::=debrid[\"☁️ Debrid\"||\"🌐 P2P\"]} • {service.cached::istrue[\"⚡ Cached\"||\"⚪ Uncached\"]} • {addon.name}",
+    "description_template": "🎥 {stream.quality} • 📦 {stream.size::rbytes} • 🗓️ {stream.year}"
+  }
+}
