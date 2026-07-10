@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nuvio Provisioning Panel</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- React & Babel -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -15,82 +13,45 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState } = React;
 
         function App() {
-            const [bingeCatUrl, setBingeCatUrl] = useState('');
-            const [isUrlValid, setIsUrlValid] = useState(true);
+            const baseUrl = window.location.origin;
+            const [copyStatus, setCopyStatus] = useState('Copy URL');
 
-            useEffect(() => {
-                const savedUrl = localStorage.getItem('nuvio_binge_url') || '';
-                setBingeCatUrl(savedUrl);
-            }, []);
-
-            useEffect(() => {
-                const isValid = bingeCatUrl === '' || bingeCatUrl.startsWith('http');
-                setIsUrlValid(isValid);
-                if (isValid) localStorage.setItem('nuvio_binge_url', bingeCatUrl);
-            }, [bingeCatUrl]);
-
-            const generateConfig = (type) => JSON.stringify({
-                schema_version: "1.0.0",
-                generated_at: new Date().toISOString(),
-                preset_type: type,
-                bingecat_url: bingeCatUrl,
-                scrapers: ["torrentio", "comet"],
-                options: {
-                    cached_only: true,
-                    max_results: type === 'mobile' ? 3 : 15,
-                    resolution_filter: type === 'mobile' ? "1080p_or_less" : undefined,
-                    name_template: "[{stream.resolution}] • {stream.type::=debrid[\"☁️ Debrid\"||\"🌐 P2P\"]} • {service.cached::istrue[\"⚡ Cached\"||\"⚪ Uncached\"]} • {addon.name}",
-                    description_template: "🎥 {stream.quality} • 📦 {stream.size::rbytes} • 🗓️ {stream.year}"
-                }
-            }, null, 2);
-
-            const downloadPreset = (type) => {
-                const blob = new Blob([generateConfig(type)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `nuvio-${type}-config.json`;
-                a.click();
-                URL.revokeObjectURL(url);
+            const copyToClipboard = (url) => {
+                navigator.clipboard.writeText(url);
+                setCopyStatus('Copied!');
+                setTimeout(() => setCopyStatus('Copy URL'), 2000);
             };
 
             return (
                 <div className="max-w-md mx-auto space-y-6">
                     <div className="text-center pb-2 border-b border-neutral-800">
-                        <h1 className="text-xl font-black text-white uppercase tracking-tight">Nuvio Provisioning</h1>
+                        <h1 className="text-xl font-black text-white uppercase tracking-tight">Nuvio Panel</h1>
                     </div>
 
-                    {/* Enhanced Instructions */}
-                    <div className="bg-neutral-900 border border-neutral-800 p-5 rounded-xl text-[12px] text-neutral-400 space-y-4">
-                        <div>
-                            <h2 className="text-white font-bold mb-1">Step 1: Catalogs (Binge Cat)</h2>
-                            <p className="mb-2">Visit the <a href="https://bingecat.com/stremio/configure" target="_blank" className="text-indigo-400 underline font-semibold">Binge Cat Configurator</a> to select your desired categories (Trending, Popular, etc.). Once done, copy the resulting URL and paste it below.</p>
+                    {/* Instructions */}
+                    <div className="bg-neutral-900 border border-neutral-800 p-5 rounded-xl text-[12px] text-neutral-400 space-y-2">
+                        <p className="font-bold text-white uppercase tracking-wider mb-2">Instructions:</p>
+                        <ol className="list-decimal ml-4 space-y-1">
+                            <li>Choose the config type below.</li>
+                            <li>Click <b>Copy URL</b>.</li>
+                            <li>Go to <a href="https://aiostreams.elfhosted.com/stremio/configure" target="_blank" className="text-emerald-400 underline font-semibold">AIOStreams Config</a>.</li>
+                            <li>Paste the link into the <b>Import Template</b> field.</li>
+                        </ol>
+                    </div>
+
+                    {/* Links */}
+                    <div className="space-y-3">
+                        <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800 flex justify-between items-center">
+                            <span className="text-[10px] text-neutral-500 font-mono truncate mr-2">Mobile Config</span>
+                            <button onClick={() => copyToClipboard(`${baseUrl}/mobile-config.json`)} className="bg-indigo-900 hover:bg-indigo-800 px-4 py-2 rounded-lg text-[10px] font-bold text-white transition">Copy URL</button>
                         </div>
-                        <div>
-                            <h2 className="text-white font-bold mb-1">Step 2: Scrapers (AIOStreams)</h2>
-                            <p>Download the preset that matches your device, then visit the <a href="https://aiostreams.elfhosted.com/stremio/configure" target="_blank" className="text-emerald-400 underline font-semibold">AIOStreams Config</a> page. Click <b>Import</b> to upload your file.</p>
+                        <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800 flex justify-between items-center">
+                            <span className="text-[10px] text-neutral-500 font-mono truncate mr-2">Quality Config</span>
+                            <button onClick={() => copyToClipboard(`${baseUrl}/quality-config.json`)} className="bg-emerald-900 hover:bg-emerald-800 px-4 py-2 rounded-lg text-[10px] font-bold text-white transition">Copy URL</button>
                         </div>
-                    </div>
-
-                    {/* Binge Cat Input */}
-                    <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800">
-                        <label className="text-[10px] font-bold uppercase text-neutral-500 mb-2 block">Saved Binge Cat URL</label>
-                        <input 
-                            type="text" 
-                            value={bingeCatUrl} 
-                            onChange={(e) => setBingeCatUrl(e.target.value)} 
-                            className={`w-full bg-neutral-950 border rounded-lg p-3 text-xs text-white ${isUrlValid ? 'border-neutral-800' : 'border-red-500'}`}
-                            placeholder="Paste your Binge Cat URL here..." 
-                        />
-                    </div>
-
-                    {/* Presets */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <button disabled={!isUrlValid} onClick={() => downloadPreset('mobile')} className="bg-indigo-900 hover:bg-indigo-800 disabled:opacity-50 text-white font-bold py-4 rounded-xl text-[10px] transition">Mobile Config</button>
-                        <button disabled={!isUrlValid} onClick={() => downloadPreset('quality')} className="bg-emerald-900 hover:bg-emerald-800 disabled:opacity-50 text-white font-bold py-4 rounded-xl text-[10px] transition">High-Qual Config</button>
                     </div>
                 </div>
             );
